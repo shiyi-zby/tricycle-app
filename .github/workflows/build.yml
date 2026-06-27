@@ -33,13 +33,18 @@ jobs:
           pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           pip install buildozer
 
-      - name: Git国内镜像，解决克隆超时
+      - name: Git全局配置镜像
         run: |
           git config --global url."https://gitee.com/mirrors/".insteadOf "https://github.com/"
           git config --global url."https://gitee.com/mirrors/".insteadOf "git@github.com:"
           git config --global http.postBuffer 524288000
 
-      - name: 清理缓存、自动同意SDK许可并打包
+      - name: 预先从Gitee镜像克隆python-for-android
+        run: |
+          mkdir -p .buildozer/android/platform
+          git clone https://gitee.com/mirrors/python-for-android.git .buildozer/android/platform/python-for-android
+
+      - name: 清理缓存、自动同意SDK许可打包
         run: |
           buildozer android clean
           yes | buildozer -v android debug
