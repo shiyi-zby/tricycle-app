@@ -1,0 +1,51 @@
+name: Build Kivy APK
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build_apk:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v5
+
+      - name: 配置 Python 3.10
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: 配置JDK17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 更换清华Ubuntu源
+        run: |
+          sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+          sudo sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+          sudo apt update
+
+      - name: 安装系统依赖
+        run: |
+          sudo apt install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev automake
+          pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+          pip install buildozer
+
+      - name: Git镜像加速
+        run: |
+          git config --global url."https://gitee.com/mirrors/".insteadOf "https://github.com/"
+
+      - name: 彻底清空上一次打包缓存（重点，解决残留打包失败）
+        run: rm -rf .buildozer
+
+      - name: 开始打包
+        run: yes | buildozer -v android debug
+
+      - name: 上传打包后的APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: APK安装包
+          path: bin/*.apk
