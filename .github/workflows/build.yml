@@ -1,0 +1,51 @@
+name: Build Kivy Android APK
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v5
+
+      - name: 设置Python 3.10
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: 配置清华软件源加速
+        run: |
+          sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+          sudo tee /etc/apt/sources.list <<'EOF'
+          deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy main restricted universe multiverse
+          deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy-updates main restricted universe multiverse
+          deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy-backports main restricted universe multiverse
+          deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ jammy-security main restricted universe multiverse
+          EOF
+          sudo apt update
+
+      - name: 安装系统依赖
+        run: |
+          sudo apt install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev automake
+          pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+          pip install buildozer
+
+      - name: Git国内镜像，解决克隆超时
+        run: |
+          git config --global url."https://gitee.com/mirrors/".insteadOf "https://github.com/"
+          git config --global url."https://gitee.com/mirrors/".insteadOf "git@github.com:"
+          git config --global http.postBuffer 524288000
+
+      - name: 清理缓存、自动同意SDK许可并打包
+        run: |
+          buildozer android clean
+          yes | buildozer -v android debug
+
+      - name: 上传APK安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android安装包APK
+          path: bin/*.apk
